@@ -29,6 +29,22 @@
       "ignorPermissionCheck" : "false",
       "roles" : ["USER","ADMIN"],
       "serviceName": "Profile Service"
+    },
+    {
+      "method" : "PUT",
+      "endpoint" : "/user/profile/edit-user-description/{userId}",
+      "description": "Изменения описания пользователя",
+      "ignorPermissionCheck" : "false",
+      "roles" : ["USER","ADMIN","OWNER"],
+      "serviceName": "Profile Service"
+    },
+    {
+      "method" : "PUT",
+      "endpoint" : "/user/profile/edit-user-password/{userId}",
+      "description": "Изменения пароля пользователя",
+      "ignorPermissionCheck" : "false",
+      "roles" : ["USER","ADMIN","OWNER"],
+      "serviceName": "Profile Service"
     }
   ]
 }

@@ -1,6 +1,6 @@
 package com.example.bff.model.enums;
 
 public enum Role {
-    USER, ADMIN
+    USER, ADMIN, OWNER
 }
 

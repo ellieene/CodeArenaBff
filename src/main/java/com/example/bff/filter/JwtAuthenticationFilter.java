@@ -5,6 +5,7 @@ import com.example.bff.component.PermissionLoader;
 import com.example.bff.model.dto.Permission;
 import com.example.bff.model.dto.Permission.URLPermission;
 import com.example.bff.model.enums.Role;
+import com.example.bff.model.enums.Server;
 import com.example.bff.service.JwtService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
@@ -20,8 +21,12 @@ import org.springframework.util.AntPathMatcher;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
+import java.nio.file.AccessDeniedException;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Component
 @RequiredArgsConstructor
@@ -33,6 +38,9 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     private final Permission permission;
 
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
+
+    private static final Pattern UUID_PATTERN = Pattern.compile(
+            "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}");
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
@@ -70,6 +78,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         try {
             jwtService.checkToken(token);
             Claims claims = jwtService.getClaims(token);
+            String userIdString = exchange.getRequest().getHeaders().getFirst("userId");
+            Server server = Server.fromTitle(perm.getServiceName());
 
             String roleStr = claims.get("role", String.class);
             Role role = Role.valueOf(roleStr);
@@ -78,10 +88,9 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             if (perm.getRoles() != null && !perm.getRoles().contains(role)) {
                 exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
                 return exchange.getResponse().setComplete();
-            }
-
-            if (perm.getMethod().equals("PUT")){
-
+            } else if (perm.getRoles().contains(Role.OWNER) && userIdString != null) {
+                UUID userIdHeader = UUID.fromString(userIdString);
+                accessCheckOwner(userIdHeader, path, server);
             }
 
             // Добавляем заголовки, не трогая сам URI
@@ -93,7 +102,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             return chain.filter(exchange.mutate().request(mutatedRequest).build())
                     .onErrorResume(throwable -> handleServiceUnavailable(exchange, throwable, perm.getServiceName()));
 
-        } catch (JwtException | IllegalArgumentException e) {
+        } catch (JwtException | IllegalArgumentException | AccessDeniedException e) {
             return exceptionResponseMapper.handleJwtException(exchange, e);
         }
     }
@@ -101,6 +110,23 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     @Override
     public int getOrder() {
         return -1;
+    }
+
+    private void accessCheckOwner(UUID userIdFromHeader, String path, Server server) throws AccessDeniedException {
+        UUID userIdFromEndpoint = UUID.fromString(extractUUID(path));
+        if (server.equals(Server.PROFILE_SERVER)) {
+            if (!userIdFromHeader.equals(userIdFromEndpoint)) {
+                throw new AccessDeniedException("");
+            }
+        }
+    }
+
+    private String extractUUID(String input) {
+        Matcher matcher = UUID_PATTERN.matcher(input);
+        if (matcher.find()) {
+            return matcher.group();
+        }
+        return null;
     }
 
     private Mono<Void> handleServiceUnavailable(ServerWebExchange exchange, Throwable throwable, String serviceName) {

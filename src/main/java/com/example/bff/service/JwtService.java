@@ -1,6 +1,7 @@
 package com.example.bff.service;
 
 import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -51,7 +52,20 @@ public class JwtService {
                 .getBody();
     }
 
-//    public String emailFromToken(String token){
-//
-//    }
+    /**
+     * Извлекает email пользователя из JWT токена.
+     *
+     * @param token JWT токен для парсинга
+     * @return email пользователя, указанный в subject токена
+     * @throws JwtException если токен невалиден или не может быть распарсен
+     * @throws IllegalArgumentException если токен равен null или пустой
+     */
+    public String extractEmail(String token) {
+        return Jwts.parserBuilder()
+                .setSigningKey(secret)
+                .build()
+                .parseClaimsJws(token)
+                .getBody()
+                .getSubject();
+    }
 }
