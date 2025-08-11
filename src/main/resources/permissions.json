@@ -1,0 +1,34 @@
+{
+  "permissions" : [
+    {
+      "method" : "POST",
+      "endpoint" : "/auth/registration",
+      "description": "Регистрация пользователя",
+      "ignorPermissionCheck" : "true",
+      "serviceName": "Authentication Service"
+    },
+    {
+      "method" : "POST",
+      "endpoint" : "/auth/authorization",
+      "description": "Авторизация пользователя",
+      "ignorPermissionCheck" : "true",
+      "serviceName": "Authentication Service"
+    },
+    {
+      "method" : "GET",
+      "endpoint" : "/user/profile/{userId}",
+      "description": "Получить пользователя",
+      "ignorPermissionCheck" : "false",
+      "roles" : ["USER","ADMIN"],
+      "serviceName": "Profile Service"
+    },
+    {
+      "method" : "GET",
+      "endpoint" : "/user/rating",
+      "description": "Получение пользователей по рейтингу",
+      "ignorPermissionCheck" : "false",
+      "roles" : ["USER","ADMIN"],
+      "serviceName": "Profile Service"
+    }
+  ]
+}
