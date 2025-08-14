@@ -1,0 +1,17 @@
+#spring:
+#  cloud:
+#    gateway:
+#      routes:
+#        - id: auth-service
+#          uri: http://codearena_auth:8081
+#          predicates:
+#            - Path=/auth/**
+#        - id: profile-service
+#          uri: http://codearena_profile:8082
+#          predicates:
+#            - Path=/user/**
+#  main:
+#    web-application-type: reactive
+#
+#jwt:
+#  secret: iI1oqjUYSgZQjjbJ3x/oH07/bCS9PIKzYAOWSyExpNk= # Base64-строка

@@ -2,14 +2,15 @@ package com.example.bff.filter;
 
 import com.example.bff.component.JwtExceptionResponseMapper;
 import com.example.bff.component.PermissionLoader;
+import com.example.bff.config.ServiceConfig;
 import com.example.bff.model.dto.Permission;
 import com.example.bff.model.dto.Permission.URLPermission;
 import com.example.bff.model.enums.Role;
-import com.example.bff.model.enums.Server;
 import com.example.bff.service.JwtService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.core.Ordered;
@@ -29,6 +30,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Component
+@Slf4j
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
@@ -36,6 +38,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
     private final JwtService jwtService;
     private final JwtExceptionResponseMapper exceptionResponseMapper;
     private final Permission permission;
+    private final ServiceConfig serviceConfig;
 
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
@@ -44,23 +47,26 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+
         String path = exchange.getRequest().getPath().value();
         String userMethod = exchange.getRequest().getMethod().name();
 
-        // Ищем совпадение с JSON
         Optional<URLPermission> urlPermission = permission.getPermissions().stream()
                 .filter(p -> pathMatcher.match(p.getEndpoint(), path) && p.getMethod().equalsIgnoreCase(userMethod))
                 .findFirst();
 
         if (urlPermission.isEmpty()) {
-            // Эндпоинт не найден в permissions.json
             exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
             return exchange.getResponse().setComplete();
         }
 
         URLPermission perm = urlPermission.get();
+        log.info("Processing request for service: {}", perm.getServiceName());
 
-        // Если проверка разрешений не нужна — пропускаем запрос
+        String serviceUri = serviceConfig.getUri(perm.getServiceName());
+        log.debug("Resolved service URI: {}", serviceUri);
+
+        // Если проверка разрешений не нужна — пропускаем
         if (perm.isIgnorPermissionCheck()) {
             return chain.filter(exchange)
                     .onErrorResume(throwable -> handleServiceUnavailable(exchange, throwable, perm.getServiceName()));
@@ -78,8 +84,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         try {
             jwtService.checkToken(token);
             Claims claims = jwtService.getClaims(token);
-            String userIdString = exchange.getRequest().getHeaders().getFirst("userId");
-            Server server = Server.fromTitle(perm.getServiceName());
+            String userIdHeaderStr = exchange.getRequest().getHeaders().getFirst("userId");
 
             String roleStr = claims.get("role", String.class);
             Role role = Role.valueOf(roleStr);
@@ -88,15 +93,15 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
             if (perm.getRoles() != null && !perm.getRoles().contains(role)) {
                 exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
                 return exchange.getResponse().setComplete();
-            } else if (perm.getRoles().contains(Role.OWNER) && userIdString != null) {
-                UUID userIdHeader = UUID.fromString(userIdString);
-                accessCheckOwner(userIdHeader, path, server);
+            } else if (perm.getRoles() != null && perm.getRoles().contains(Role.OWNER) && userIdHeaderStr != null) {
+                UUID userIdHeader = UUID.fromString(userIdHeaderStr);
+                accessCheckOwner(userIdHeader, path);
             }
 
-            // Добавляем заголовки, не трогая сам URI
             ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
                     .header("X-Username", claims.getSubject())
                     .header("X-Role", roleStr)
+                    .header("X-Service-Uri", serviceUri)
                     .build();
 
             return chain.filter(exchange.mutate().request(mutatedRequest).build())
@@ -112,12 +117,10 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         return -1;
     }
 
-    private void accessCheckOwner(UUID userIdFromHeader, String path, Server server) throws AccessDeniedException {
+    private void accessCheckOwner(UUID userIdFromHeader, String path) throws AccessDeniedException {
         UUID userIdFromEndpoint = UUID.fromString(extractUUID(path));
-        if (server.equals(Server.PROFILE_SERVER)) {
-            if (!userIdFromHeader.equals(userIdFromEndpoint)) {
-                throw new AccessDeniedException("");
-            }
+        if (!userIdFromHeader.equals(userIdFromEndpoint)) {
+            throw new AccessDeniedException("User is not owner");
         }
     }
 
@@ -133,12 +136,14 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         Throwable cause = throwable;
         while (cause != null) {
             if (cause instanceof java.net.ConnectException ||
-                    cause.getMessage().contains("Connection refused") ||
-                    cause.getMessage().contains("Connection reset")) {
+                    (cause.getMessage() != null &&
+                            (cause.getMessage().contains("Connection refused") ||
+                                    cause.getMessage().contains("Connection reset")))) {
+
                 exchange.getResponse().setStatusCode(HttpStatus.SERVICE_UNAVAILABLE);
                 exchange.getResponse().getHeaders().setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
 
-                var errorBody = Map.of(
+                Map<String, String> errorBody = Map.of(
                         "error", "Сервер временно недоступен",
                         "server", serviceName
                 );
