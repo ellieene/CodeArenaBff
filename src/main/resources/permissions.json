@@ -16,10 +16,10 @@
     },
     {
       "method" : "GET",
-      "endpoint" : "/user/profile/{userId}",
+      "endpoint" : "/user/profile/{username}",
       "description": "Получить пользователя",
       "ignorPermissionCheck" : "false",
-      "roles" : ["USER","ADMIN"],
+      "roles" : ["USER","ADMIN", "EDIT"],
       "serviceName": "Profile Service"
     },
     {

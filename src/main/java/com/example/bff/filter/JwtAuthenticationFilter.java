@@ -98,11 +98,20 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                 accessCheckOwner(userIdHeader, path);
             }
 
-            ServerHttpRequest mutatedRequest = exchange.getRequest().mutate()
+            ServerHttpRequest.Builder requestBuilder = exchange.getRequest().mutate()
                     .header("X-Username", claims.getSubject())
                     .header("X-Role", roleStr)
-                    .header("X-Service-Uri", serviceUri)
-                    .build();
+                    .header("X-Service-Uri", serviceUri);
+
+            // Добавляем userId только для конкретных эндпоинтов
+            if (perm.getRoles() != null && perm.getRoles().contains(Role.EDIT) && userIdHeaderStr != null) {
+                requestBuilder.header("userId", userIdHeaderStr);
+                log.info("Added userId header for profile endpoint: {}", userIdHeaderStr);
+            }
+
+            ServerHttpRequest mutatedRequest = requestBuilder.build();
+
+
 
             return chain.filter(exchange.mutate().request(mutatedRequest).build())
                     .onErrorResume(throwable -> handleServiceUnavailable(exchange, throwable, perm.getServiceName()));
