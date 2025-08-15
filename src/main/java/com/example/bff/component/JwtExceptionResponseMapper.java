@@ -61,7 +61,6 @@ public class JwtExceptionResponseMapper {
         if (e instanceof MalformedJwtException) return MALFORMED_JWT_EXCEPTION;
         if (e instanceof SignatureException) return SIGNATURE_EXCEPTION;
         if (e instanceof IllegalArgumentException) return ILLEGAL_ARGUMENT_EXCEPTION;
-        if (e instanceof AccessDeniedException) return ACCESS_DENIED;
         return JWT_EXCEPTION;
     }
 

@@ -12,6 +12,9 @@ import java.nio.charset.Charset;
 @Configuration
 public class PermissionLoader {
 
+    /**
+     * Загрузчик конфигурации разрешений для API-эндпоинтов.
+     */
     @Bean
     public Permission init() throws Exception {
         ObjectMapper mapper = new ObjectMapper();

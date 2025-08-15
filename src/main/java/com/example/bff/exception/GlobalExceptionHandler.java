@@ -11,6 +11,18 @@ import java.nio.file.AccessDeniedException;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    @ExceptionHandler(MissingTokenException.class)
+    public StringResponse handleException(MissingTokenException e) {
+        return new StringResponse(e.getMessage());
+    }
+
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    @ExceptionHandler(AccessDeniedException.class)
+    public StringResponse handleException(AccessDeniedException e) {
+        return new StringResponse(e.getMessage());
+    }
+
 //    @ResponseStatus(HttpStatus.FORBIDDEN)
 //    @ExceptionHandler(AccessDeniedException.class)
 //    public StringResponse handleException(AccessDeniedException e) {

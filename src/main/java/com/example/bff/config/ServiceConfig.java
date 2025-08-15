@@ -14,13 +14,6 @@ import java.util.Map;
 public class ServiceConfig {
     private Map<String, String> uri = new HashMap<>();
 
-    @Bean
-    public ApplicationRunner runner(Environment env) {
-        return args -> {
-            System.out.println("Auth URI: " + env.getProperty("services.authentication-service"));
-        };
-    }
-
     public String getUri(String serviceName) {
         return uri.get(serviceName);
     }

@@ -23,5 +23,8 @@ public class CommonStrings {
     public static final String SIGNATURE_EXCEPTION = "Неверная подпись токена";
     public static final String ILLEGAL_ARGUMENT_EXCEPTION = "Неверный токен";
     public static final String JWT_EXCEPTION = "Ошибка с токеном";
+    public static final String MISSING_USER_ID_HEADER = "Отсутствует обязательный заголовок userId";
+    public static final String MISSING_USERNAME_HEADER = "Отсутствует обязательный заголовок 'username'";
+
 
 }
