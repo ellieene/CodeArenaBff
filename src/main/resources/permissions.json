@@ -15,6 +15,30 @@
       "serviceName": "Authentication Service"
     },
     {
+      "method" : "POST",
+      "endpoint" : "/article/create-article",
+      "description": "Создания статьи",
+      "ignorPermissionCheck" : "false",
+      "roles" : ["USER","ADMIN", "EDIT"],
+      "serviceName": "Article Service"
+    },
+    {
+      "method" : "POST",
+      "endpoint" : "/article/purchasing-an-article/{articleId}",
+      "description": "Покупка статьи",
+      "ignorPermissionCheck" : "false",
+      "roles" : ["USER","ADMIN", "EDIT"],
+      "serviceName": "Article Service"
+    },
+    {
+      "method" : "GET",
+      "endpoint" : "/article/{articleId}",
+      "description": "Получить статью",
+      "ignorPermissionCheck" : "false",
+      "roles" : ["USER","ADMIN", "EDIT"],
+      "serviceName": "Article Service"
+    },
+    {
       "method" : "GET",
       "endpoint" : "/user/profile/{username}",
       "description": "Получить пользователя",
@@ -40,11 +64,27 @@
     },
     {
       "method" : "PUT",
+      "endpoint" : "/article/edit-article/{articleId}",
+      "description": "Изменить статью",
+      "ignorPermissionCheck" : "false",
+      "roles" : ["USER","ADMIN", "EDIT"],
+      "serviceName": "Article Service"
+    },
+    {
+      "method" : "PUT",
       "endpoint" : "/user/profile/edit-user-password/{userId}",
       "description": "Изменения пароля пользователя",
       "ignorPermissionCheck" : "false",
       "roles" : ["USER","ADMIN","OWNER"],
       "serviceName": "Profile Service"
+    },
+    {
+      "method" : "DELETE",
+      "endpoint" : "/article/delete-article/{articleId}",
+      "description": "Удалить статью",
+      "ignorPermissionCheck" : "false",
+      "roles" : ["USER","ADMIN", "EDIT"],
+      "serviceName": "Article Service"
     }
   ]
 }

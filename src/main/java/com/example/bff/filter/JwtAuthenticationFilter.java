@@ -3,6 +3,7 @@ package com.example.bff.filter;
 import com.example.bff.component.JwtExceptionResponseMapper;
 import com.example.bff.config.ServiceConfig;
 import com.example.bff.exception.MissingTokenException;
+import com.example.bff.exception.PermissionNotFoundException;
 import com.example.bff.model.dto.Permission;
 import com.example.bff.model.dto.Permission.URLPermission;
 import com.example.bff.model.enums.Role;
@@ -109,11 +110,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
         try {
             URLPermission perm = findPermission(exchange)
-                    .orElseThrow(() -> {
-                        log.warn("No permission found for path: {}", exchange.getRequest().getPath());
-                        exchange.getResponse().setStatusCode(HttpStatus.FORBIDDEN);
-                        return new RuntimeException("Permission not found");
-                    });
+                    .orElseThrow(() -> new PermissionNotFoundException("Permission not found for path: " + exchange.getRequest().getPath()));
 
             log.debug("Permission matched: {}", perm);
 
@@ -243,11 +240,15 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
         if (perm.getRoles() != null && perm.getRoles().contains(Role.EDIT)) {
             String username = claims.get("name", String.class);
+            String roleStr = claims.get("role", String.class);
+            String userId = claims.get("userId", String.class);
             if (username == null) {
                 log.warn("Missing username in token for EDIT role");
                 throw new MissingTokenException(MISSING_USERNAME_HEADER);
             }
+            requestBuilder.header("userId", userId);
             requestBuilder.header("username", username);
+            requestBuilder.header("role", roleStr);
         }
 
         return requestBuilder.build();
@@ -307,9 +308,11 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
         Throwable cause = throwable;
         while (cause != null) {
             if (cause instanceof java.net.ConnectException ||
+                    cause instanceof java.net.UnknownHostException || // 👈 Добавил
                     (cause.getMessage() != null &&
                             (cause.getMessage().contains("Connection refused") ||
-                                    cause.getMessage().contains("Connection reset")))) {
+                                    cause.getMessage().contains("Connection reset") ||
+                                    cause.getMessage().contains("Name or service not known")))) { // 👈 На всякий случай
 
                 exchange.getResponse().setStatusCode(HttpStatus.SERVICE_UNAVAILABLE);
                 exchange.getResponse().getHeaders().setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
