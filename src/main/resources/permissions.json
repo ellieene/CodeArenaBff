@@ -31,6 +31,14 @@
       "serviceName": "Article Service"
     },
     {
+      "method" : "POST",
+      "endpoint" : "/article/add-to-favorites/{articleId}",
+      "description": "Добавление статьи в избранное",
+      "ignorPermissionCheck" : "false",
+      "roles" : ["USER","ADMIN", "EDIT"],
+      "serviceName": "Article Service"
+    },
+    {
       "method" : "GET",
       "endpoint" : "/article/{articleId}",
       "description": "Получить статью",
